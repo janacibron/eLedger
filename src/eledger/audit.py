@@ -1,6 +1,7 @@
 """Audit ledger and manifests."""
 import json, hashlib
 from pathlib import Path
+from .redaction import redact
 from .models import RunManifest
 
 
@@ -9,7 +10,7 @@ def write_manifest(manifest: RunManifest, path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         raise FileExistsError(f"refusing to overwrite {path}")
-    path.write_text(json.dumps(manifest.to_dict(), indent=2), encoding="utf-8")
+    path.write_text(json.dumps(redact(manifest.to_dict()), indent=2), encoding="utf-8")
     return path
 
 

@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from eledger.models import SessionMeta, MessageRecord, NormalizedSession
 from eledger.ingestion import normalize_session
 from eledger.evaluation import evaluate_candidate
-from eledger.models import Candidate
+from eledger.redaction import redact
 
 SUCCESS = 0
 INCOMPLETE = 1
@@ -37,9 +37,9 @@ def main(argv=None):
                     out.append({"error": str(e)})
             if args.output:
                 with open(args.output, "w") as f:
-                    json.dump(out, f)
+                    json.dump(redact(out), f)
             else:
-                print(json.dumps(out))
+                print(json.dumps(redact(out)))
             return SUCCESS
         if args.cmd == "validate":
             data = json.load(open(args.input, encoding="utf-8"))
