@@ -102,3 +102,43 @@ def test_check_divergence_fetch_failure(monkeypatch):
     div, msg = p.check_divergence()
     assert div is True
     assert "fetch failed" in msg
+
+
+def test_check_divergence_behind(monkeypatch):
+    import eledger.publisher as pub
+    class R:
+        def __init__(self, rc, out="", err=""):
+            self.returncode = rc; self.stdout = out; self.stderr = err
+    calls = {"n": 0}
+    def fake_run(cmd, cwd=None, timeout=None):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return R(0)
+        return R(0, "3")
+    monkeypatch.setattr(pub, "_run", fake_run)
+    import tempfile
+    work = tempfile.mkdtemp()
+    p = pub.Publisher(work, allowed_files=set(), dry_run=True)
+    div, msg = p.check_divergence()
+    assert div is True
+    assert "behind remote by 3" in msg
+
+
+def test_check_divergence_up_to_date(monkeypatch):
+    import eledger.publisher as pub
+    class R:
+        def __init__(self, rc, out="", err=""):
+            self.returncode = rc; self.stdout = out; self.stderr = err
+    calls = {"n": 0}
+    def fake_run(cmd, cwd=None, timeout=None):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return R(0)
+        return R(0, "0")
+    monkeypatch.setattr(pub, "_run", fake_run)
+    import tempfile
+    work = tempfile.mkdtemp()
+    p = pub.Publisher(work, allowed_files=set(), dry_run=True)
+    div, msg = p.check_divergence()
+    assert div is False
+    assert "up to date" in msg

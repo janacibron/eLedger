@@ -17,3 +17,10 @@ def test_cli_input_error(tmp_path):
 
 def test_cli_no_args():
     assert main([]) == 2
+
+
+def test_cli_fatal(tmp_path):
+    # IsADirectoryError is not in the caught input-error tuple -> fatal -> 3
+    d = tmp_path / "adir"
+    d.mkdir()
+    assert main(["run", str(d)]) == 3
