@@ -6,7 +6,8 @@ from .redaction import redact
 MAX_FILE_BYTES = 5 * 1024 * 1024
 REQUIRED_TOP = {"timestamp", "session_id", "request", "error"}
 REQUIRED_REQUEST = {"method", "url", "headers", "body"}
-REQUIRED_ERROR = {"type", "message", "status_code", "body", "response_status", "response_text"}
+KNOWN_ERROR_KEYS = {"type", "message", "status_code", "body", "response_status", "response_text", "code"}
+REQUIRED_ERROR = {"type", "message"}
 
 
 class RequestDumpError(Exception):
@@ -47,6 +48,8 @@ class RequestDumpReader:
             raise RequestDumpError("invalid request object")
         if not isinstance(err, dict) or not REQUIRED_ERROR.issubset(err.keys()):
             raise RequestDumpError("invalid error object")
+        if not set(err.keys()).issubset(KNOWN_ERROR_KEYS):
+            raise RequestDumpError("unknown error keys")
         if not isinstance(req["headers"], dict):
             raise RequestDumpError("headers must be object")
         if not isinstance(req["body"], dict):
