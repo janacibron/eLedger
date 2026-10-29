@@ -79,6 +79,8 @@ def run_pipeline(records, run_id, out_dir):
         "candidates": [c.to_dict() for c in candidates],
         "evaluations": [e.to_dict() for e in evals],
     }
+    from .redaction import redact
+    report = redact(report)
     report_path = out_dir / f"{run_id}.json"
     if report_path.exists():
         raise FileExistsError("refusing to overwrite report")
