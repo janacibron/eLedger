@@ -54,4 +54,3 @@ Topic similarity alone never establishes skill invocation or causal attribution.
 - Add a human-review and authorization flow.
 
 Planned capabilities are distinguished from implemented functionality throughout this document. No benchmarks, supported integrations, APIs, installation instructions, or license terms are claimed at this time.
-PYEOF

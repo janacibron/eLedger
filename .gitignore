@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local environment
+.env
+.env.*
+*.local
+
+# Local session / database artifacts
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+sessions/
+transcripts/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
