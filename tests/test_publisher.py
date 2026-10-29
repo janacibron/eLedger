@@ -72,3 +72,33 @@ def test_publisher_path_traversal(tmp_path):
     pub = Publisher(str(tmp_path), allowed_files={"x.json"}, dry_run=True)
     assert not pub.stage(["../escape.json"])[0] or True
     # _safe via validate_artifacts path check
+
+
+def test_check_divergence_timeout(monkeypatch):
+    import eledger.publisher as pub
+    def fake_run(cmd, cwd=None, timeout=None):
+        raise __import__("subprocess").TimeoutExpired(cmd, timeout or 1)
+    monkeypatch.setattr(pub, "_run", fake_run)
+    work = tempfile.mkdtemp() if False else None
+    import tempfile, os
+    work = tempfile.mkdtemp()
+    os.makedirs(os.path.join(work, ".git"), exist_ok=True)
+    p = pub.Publisher(work, allowed_files=set(), dry_run=True)
+    div, msg = p.check_divergence()
+    assert div is True
+    assert "timed out" in msg
+
+
+def test_check_divergence_fetch_failure(monkeypatch):
+    import eledger.publisher as pub
+    class R:
+        returncode = 1
+        stderr = "network error"
+        stdout = ""
+    monkeypatch.setattr(pub, "_run", lambda cmd, cwd=None, timeout=None: R())
+    import tempfile
+    work = tempfile.mkdtemp()
+    p = pub.Publisher(work, allowed_files=set(), dry_run=True)
+    div, msg = p.check_divergence()
+    assert div is True
+    assert "fetch failed" in msg

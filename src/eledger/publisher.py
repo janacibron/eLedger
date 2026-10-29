@@ -7,8 +7,8 @@ PROHIBITED_EXTENSIONS = {".db", ".sqlite", ".sqlite3", ".db-wal", ".db-shm", ".l
 PROHIBITED_NAMES = {"state.db", "transcripts"}
 
 
-def _run(cmd, cwd=None):
-    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+def _run(cmd, cwd=None, timeout=None):
+    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
 
 
 def _hash_file(path):
@@ -112,10 +112,12 @@ class Publisher:
 
     def check_divergence(self):
         """Fetch and check if local is behind remote. Returns (diverged, msg)."""
-        r = _run(["git", "fetch", "origin"], cwd=str(self.repo_path))
+        try:
+            r = _run(["git", "fetch", "origin"], cwd=str(self.repo_path), timeout=10)
+        except subprocess.TimeoutExpired:
+            return True, "fetch timed out"
         if r.returncode != 0:
             return True, f"fetch failed: {r.stderr}"
-        # compare HEAD to upstream
         r = _run(["git", "rev-list", "--count", "HEAD..@{u}"], cwd=str(self.repo_path))
         if r.returncode != 0:
             return False, "no upstream or detached"

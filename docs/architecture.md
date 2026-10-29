@@ -21,4 +21,4 @@
 - Human authorization for consequential changes.
 
 ## Status
-Architecture established by this milestone. No session adapter or evidence model implemented yet.
+Implemented: session adapters (SyntheticSessionReader, HermesStateDbReader, RequestDumpReader), normalization, evidence extraction, candidate construction, evaluation, redaction, audit manifests, publisher (dry-run), CLI with exit codes, attribution classifier. Tests: 78 passed, 1 skipped. Planned: real session adapters for additional sources, real GitHub publication.

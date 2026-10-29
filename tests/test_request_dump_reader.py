@@ -86,3 +86,35 @@ def test_no_mutation(tmp_path):
 def test_compacted_uncertainty_documented():
     # reader does not filter compacted; just ensure field not assumed
     assert True
+
+
+def test_minimal_error_shape(tmp_path):
+    d = json.loads(json.dumps(VALID))
+    d["error"] = {"type": "X", "message": "m"}
+    p = write(tmp_path, d)
+    sess = RequestDumpReader(p).read_session(p)
+    assert sess["provenance"]["error_type"] == "X"
+
+
+def test_seven_key_error_shape(tmp_path):
+    d = json.loads(json.dumps(VALID))
+    d["error"] = {"type": "X", "message": "m", "status_code": 400, "body": {"status": "e", "message": "m"}, "response_status": 400, "response_text": "t", "code": "E"}
+    p = write(tmp_path, d)
+    sess = RequestDumpReader(p).read_session(p)
+    assert sess["provenance"]["error_type"] == "X"
+
+
+def test_unknown_error_key_rejected(tmp_path):
+    d = json.loads(json.dumps(VALID))
+    d["error"] = {"type": "X", "message": "m", "foo": "bar"}
+    p = write(tmp_path, d)
+    with pytest.raises(RequestDumpError):
+        RequestDumpReader(p).read_session(p)
+
+
+def test_missing_required_error_key_rejected(tmp_path):
+    d = json.loads(json.dumps(VALID))
+    d["error"] = {"type": "X"}
+    p = write(tmp_path, d)
+    with pytest.raises(RequestDumpError):
+        RequestDumpReader(p).read_session(p)
