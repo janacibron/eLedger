@@ -3,6 +3,8 @@
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any
 
+from eledger.capability_assessment import assess_program
+
 
 @dataclass
 class Goal:
@@ -28,7 +30,6 @@ def goal_keywords(goal: Goal) -> set:
 
 
 def goal_match_score(goal: Goal, program: Dict[str, Any]) -> float:
-    """Score how well a program matches a goal (0-100)."""
     kw = goal_keywords(goal)
     if not kw:
         return 0.0
@@ -41,30 +42,39 @@ def goal_match_score(goal: Goal, program: Dict[str, Any]) -> float:
     return round(100.0 * hits / len(kw), 2)
 
 
-def rank_for_goal(goal, programs):
+def evidence_goal_score(goal: Goal, program: Dict[str, Any]) -> float:
+    reqs = goal.functional if goal.functional else [w for w in goal.original.lower().split() if len(w) > 3]
+    assessments = assess_program(reqs, program)
+    if not assessments:
+        return 0.0
+    supported = sum(1 for a in assessments if a.status == "supported")
+    partial = sum(1 for a in assessments if a.status == "partial")
+    return round(100.0 * (supported + 0.5 * partial) / len(assessments), 2)
+
+
+def rank_for_goal(goal: Goal, programs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     ranked = []
     for p in programs:
-        ranked.append({**p, "goal_score": goal_match_score(goal, p)})
-    ranked.sort(key=lambda x: (-x["goal_score"], x.get("path", "")))
+        ranked.append({**p, "goal_score": goal_match_score(goal, p), "evidence_score": evidence_goal_score(goal, p)})
+    ranked.sort(key=lambda x: (-x["evidence_score"], -x["goal_score"], x.get("path", "")))
     return ranked
 
 
 def recommend_strategy(goal, programs):
-    """Recommend a strategy based on goal match scores."""
     ranked = rank_for_goal(goal, programs)
     if not ranked:
         return {"strategy": "build_new", "reason": "no candidates found", "ranked": []}
     best = ranked[0]
-    if best["goal_score"] >= 50:
-        return {"strategy": "extend_existing", "candidate": best["path"], "reason": "best goal match", "ranked": ranked}
-    if best["goal_score"] > 0:
-        return {"strategy": "integrate_components", "candidate": best["path"], "reason": "partial match", "ranked": ranked}
-    return {"strategy": "build_new", "reason": "no suitable candidate", "ranked": ranked}
+    if best["evidence_score"] >= 50:
+        return {"strategy": "extend_existing", "candidate": best["path"], "reason": "best evidence match", "ranked": ranked}
+    if best["evidence_score"] > 0:
+        return {"strategy": "integrate_components", "candidate": best["path"], "reason": "partial evidence match", "ranked": ranked}
+    return {"strategy": "build_new", "reason": "no verified candidate", "ranked": ranked}
 
 
 def goal_report(goal, programs):
     rec = recommend_strategy(goal, programs)
     lines = [f"# Goal Report: {goal.original}", "", f"Strategy: {rec['strategy']}", f"Reason: {rec['reason']}", "", "## Ranked candidates"]
     for r in rec["ranked"]:
-        lines.append(f"- {r['path']}: goal_score={r['goal_score']}")
-    return "\n".join(lines)
+        lines.append(f"- {r['path']}: goal_score={r['goal_score']}, evidence_score={r['evidence_score']}")
+    return chr(10).join(lines)
