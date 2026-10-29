@@ -77,3 +77,11 @@ def test_e2e_redaction_survives_publisher(tmp_path):
     manifest_text = open(res["manifest"]).read()
     assert secret not in report_text
     assert secret not in manifest_text
+
+
+def test_provenance_preserved(tmp_path):
+    records = [{"meta": {"session_id": "s1", "source": "synthetic"}, "messages": [{"id": 1, "role": "user", "content": "hi"}], "provenance": {"k": "v"}}]
+    ns = normalize_session(records[0]) if False else None
+    from eledger.ingestion import normalize_session
+    ns = normalize_session(records[0])
+    assert ns.provenance == {"k": "v"}

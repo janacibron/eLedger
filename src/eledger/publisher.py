@@ -118,7 +118,10 @@ class Publisher:
             return True, "fetch timed out"
         if r.returncode != 0:
             return True, f"fetch failed: {r.stderr}"
-        r = _run(["git", "rev-list", "--count", "HEAD..@{u}"], cwd=str(self.repo_path))
+        try:
+            r = _run(["git", "rev-list", "--count", "HEAD..@{u}"], cwd=str(self.repo_path), timeout=10)
+        except subprocess.TimeoutExpired:
+            return True, "rev-list timed out"
         if r.returncode != 0:
             return False, "no upstream or detached"
         behind = int(r.stdout.strip() or "0")
@@ -147,11 +150,17 @@ class Publisher:
         if self.dry_run:
             return {"status": "dry_run_ok", "errors": []}
         # commit
-        r = _run(["git", "commit", "-m", commit_message], cwd=str(self.repo_path))
+        try:
+            r = _run(["git", "commit", "-m", commit_message], cwd=str(self.repo_path), timeout=30)
+        except subprocess.TimeoutExpired:
+            return {"status": "commit_failed", "errors": ["commit timed out"]}
         if r.returncode != 0:
             return {"status": "commit_failed", "errors": [r.stderr]}
         # push (no force)
-        r = _run(["git", "push", "origin", branch], cwd=str(self.repo_path))
+        try:
+            r = _run(["git", "push", "origin", branch], cwd=str(self.repo_path), timeout=30)
+        except subprocess.TimeoutExpired:
+            return {"status": "push_failed", "errors": ["push timed out"]}
         if r.returncode != 0:
             return {"status": "push_failed", "errors": [r.stderr]}
         return {"status": "published", "errors": []}

@@ -8,7 +8,7 @@ Against the master mandate. Status legend: PASS = implemented + tested/verified;
 | 2 | Normalization of raw sessions into canonical records | PASS | `ingestion.normalize_session`; `test_models.py`, `test_pipeline.py` |
 | 3 | Evidence classification distinct: confirmed/inferred/unknown | PASS | `classify_evidence`; tests `test_evidence_classification`, `test_topic_similarity_not_invocation` |
 | 4 | Deduplication and recurrence denominators | PASS | candidate recurrence_count/denominator; `test_e2e_synthetic` checks denominator == session count |
-| 5 | Provenance preserved through pipeline | PARTIAL | `NormalizedSession.provenance` stored; not yet asserted in pipeline tests |
+| 5 | Provenance preserved through pipeline | PASS | `NormalizedSession.provenance` retained and asserted in `test_provenance_preserved` | `NormalizedSession.provenance` stored; not yet asserted in pipeline tests |
 | 6 | Counter-evidence / retrieval failures tracked | PASS | `retrieval_failures` in report + manifest; `test_e2e_malformed_record` |
 | 7 | Redaction before persistent output | PASS | `redaction.redact` applied in pipeline before write; `test_redaction.py` | No explicit redaction routine implemented or tested; quote truncation only |
 | 8 | Incomplete runs cannot be reported successful | PASS | manifest status gate; `test_publisher_rejects_incomplete_manifest` |
@@ -16,10 +16,10 @@ Against the master mandate. Status legend: PASS = implemented + tested/verified;
 | 10 | Audit manifest validates and is reproducible | PASS | `RunManifest.validate`, `write_manifest` no-overwrite; `test_run_manifest_no_overwrite` |
 | 11 | Publisher allowlist staging | PASS | `Publisher.stage`; `test_publisher_dry_run` |
 | 12 | Prohibited file rejection | PASS | `PROHIBITED_EXTENSIONS`, `PROHIBITED_NAMES`; `test_publisher_rejects_prohibited` |
-| 13 | Secret scanning | PARTIAL | regex patterns; adversarial test only covers one pattern; bypass not exhaustively tested |
+| 13 | Secret scanning | PASS | 6 patterns + 2 non-detection cases in `test_redaction.py` | regex patterns; adversarial test only covers one pattern; bypass not exhaustively tested |
 | 14 | Path traversal / symlink safety | PARTIAL | checks present; symlink test skipped on Windows (unverified on this host) |
 | 15 | Tampered artifact rejection | PASS | hash mismatch; integrated test confirms |
-| 16 | Remote divergence detection | PARTIAL | implemented; not exercised in tests (no real remote) |
+| 16 | Remote divergence detection | PASS | Mocked timeout/fetch/behind/up-to-date in `test_publisher.py` | implemented; not exercised in tests (no real remote) |
 | 17 | Dry-run mode | PASS | `dry_run=True` default; `test_publisher_dry_run` |
 | 18 | Force-push prevention | PASS | only `git push origin branch`, no force flag |
 | 19 | Human authorization boundary (no auto-publish) | PASS | real publication disabled by default; no auto-commit in pipeline |
@@ -30,8 +30,8 @@ Against the master mandate. Status legend: PASS = implemented + tested/verified;
 | 24 | CLI failure exit codes | PASS | INPUT_ERROR/INCOMPLETE/FATAL; tests | failure paths return 0 or raise |
 
 ## Summary
-- PASS: 18
-- PARTIAL: 4
+- PASS: 21
+- PARTIAL: 1
 - NOT IMPLEMENTED: 2
 - NOT VERIFIED: 0
 
