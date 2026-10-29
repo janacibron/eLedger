@@ -105,7 +105,10 @@ class Publisher:
             return True, []
         # actual git add for each
         for f in files:
-            r = _run(["git", "add", "--", f], cwd=str(self.repo_path))
+            try:
+                r = _run(["git", "add", "--", f], cwd=str(self.repo_path), timeout=10)
+            except subprocess.TimeoutExpired:
+                return False, [f"git add timed out for {f}: outcome unknown"]
             if r.returncode != 0:
                 errors.append(f"git add failed: {f}: {r.stderr}")
         return len(errors) == 0, errors
@@ -153,14 +156,14 @@ class Publisher:
         try:
             r = _run(["git", "commit", "-m", commit_message], cwd=str(self.repo_path), timeout=30)
         except subprocess.TimeoutExpired:
-            return {"status": "commit_failed", "errors": ["commit timed out"]}
+            return {"status": "commit_timeout", "errors": ["commit timed out; outcome unknown — verify repository state before retrying"]}
         if r.returncode != 0:
             return {"status": "commit_failed", "errors": [r.stderr]}
         # push (no force)
         try:
             r = _run(["git", "push", "origin", branch], cwd=str(self.repo_path), timeout=30)
         except subprocess.TimeoutExpired:
-            return {"status": "push_failed", "errors": ["push timed out"]}
+            return {"status": "push_timeout", "errors": ["push timed out; outcome unknown — verify remote state before retrying"]}
         if r.returncode != 0:
             return {"status": "push_failed", "errors": [r.stderr]}
         return {"status": "published", "errors": []}

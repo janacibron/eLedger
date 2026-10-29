@@ -142,3 +142,21 @@ def test_check_divergence_up_to_date(monkeypatch):
     div, msg = p.check_divergence()
     assert div is False
     assert "up to date" in msg
+
+
+def test_stage_timeout(monkeypatch):
+    import eledger.publisher as pub
+    import subprocess
+    def fake_run(cmd, cwd=None, timeout=None):
+        raise subprocess.TimeoutExpired(cmd, timeout or 1)
+    monkeypatch.setattr(pub, "_run", fake_run)
+    import tempfile, os
+    work = tempfile.mkdtemp()
+    # create allowlisted file
+    (Path(work) / "a.txt").write_text("x") if False else None
+    from pathlib import Path
+    Path(work, "a.txt").write_text("x")
+    p = pub.Publisher(work, allowed_files={"a.txt"}, dry_run=False)
+    ok, errs = p.stage(["a.txt"])
+    assert ok is False
+    assert any("timed out" in e and "outcome unknown" in e for e in errs)
