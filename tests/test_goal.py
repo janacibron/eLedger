@@ -20,6 +20,21 @@ def test_rank_for_goal_differentiates():
     assert ranked[0]["path"] == "mgmt"
 
 
+def test_recommend_strategy_build_new():
+    from eledger.goal import Goal, recommend_strategy
+    g = Goal(original="zzzzz")
+    rec = recommend_strategy(g, [{"path": "a", "files": [], "manifests": []}])
+    assert rec["strategy"] in ("build_new", "integrate_components", "extend_existing")
+
+
+def test_goal_report():
+    from eledger.goal import Goal, goal_report
+    g = Goal(original="management tool")
+    r = goal_report(g, [{"path": "mgmt", "files": ["management.py"], "manifests": []}])
+    assert "Goal Report" in r
+
+
 def test_goal_preserves_original():
+    from eledger.goal import Goal
     g = Goal(original="I need a management tool")
     assert g.original == "I need a management tool"

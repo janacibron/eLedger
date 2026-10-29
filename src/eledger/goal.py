@@ -41,9 +41,30 @@ def goal_match_score(goal: Goal, program: Dict[str, Any]) -> float:
     return round(100.0 * hits / len(kw), 2)
 
 
-def rank_for_goal(goal: Goal, programs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def rank_for_goal(goal, programs):
     ranked = []
     for p in programs:
         ranked.append({**p, "goal_score": goal_match_score(goal, p)})
     ranked.sort(key=lambda x: (-x["goal_score"], x.get("path", "")))
     return ranked
+
+
+def recommend_strategy(goal, programs):
+    """Recommend a strategy based on goal match scores."""
+    ranked = rank_for_goal(goal, programs)
+    if not ranked:
+        return {"strategy": "build_new", "reason": "no candidates found", "ranked": []}
+    best = ranked[0]
+    if best["goal_score"] >= 50:
+        return {"strategy": "extend_existing", "candidate": best["path"], "reason": "best goal match", "ranked": ranked}
+    if best["goal_score"] > 0:
+        return {"strategy": "integrate_components", "candidate": best["path"], "reason": "partial match", "ranked": ranked}
+    return {"strategy": "build_new", "reason": "no suitable candidate", "ranked": ranked}
+
+
+def goal_report(goal, programs):
+    rec = recommend_strategy(goal, programs)
+    lines = [f"# Goal Report: {goal.original}", "", f"Strategy: {rec['strategy']}", f"Reason: {rec['reason']}", "", "## Ranked candidates"]
+    for r in rec["ranked"]:
+        lines.append(f"- {r['path']}: goal_score={r['goal_score']}")
+    return "\n".join(lines)
