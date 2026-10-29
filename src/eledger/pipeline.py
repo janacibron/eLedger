@@ -95,7 +95,7 @@ def run_pipeline(records, run_id, out_dir):
         sessions_excluded=len(failures),
         retrieval_failures=failures,
         candidate_count=len(candidates),
-        artifact_hashes={"report": hash_file(report_path)},
+        artifact_hashes={report_path.name: hash_file(report_path)},
         status="complete",
         limitations=["synthetic data only"],
     )
