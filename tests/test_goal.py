@@ -34,6 +34,24 @@ def test_goal_report():
     assert "Goal Report" in r
 
 
+def test_no_suitable_candidate():
+    from eledger.goal import Goal, recommend_strategy
+    g = Goal(original="management tool")
+    rec = recommend_strategy(g, [])
+    assert rec["strategy"] == "build_new"
+    assert rec["ranked"] == []
+
+
+def test_deterministic_ranking():
+    from eledger.goal import Goal, rank_for_goal
+    g = Goal(original="management tool")
+    progs = [{"path": "a", "files": ["management.py"], "manifests": []},
+             {"path": "b", "files": ["tool.py"], "manifests": []}]
+    r1 = rank_for_goal(g, progs)
+    r2 = rank_for_goal(g, progs)
+    assert r1 == r2
+
+
 def test_goal_preserves_original():
     from eledger.goal import Goal
     g = Goal(original="I need a management tool")
