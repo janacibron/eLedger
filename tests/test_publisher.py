@@ -160,3 +160,75 @@ def test_stage_timeout(monkeypatch):
     ok, errs = p.stage(["a.txt"])
     assert ok is False
     assert any("timed out" in e and "outcome unknown" in e for e in errs)
+
+
+def test_path_traversal_rejected():
+    import tempfile, os
+    from eledger.publisher import Publisher
+    work = tempfile.mkdtemp()
+    p = Publisher(work, allowed_files={"a.txt"}, dry_run=True)
+    ok, errs = p.stage(["../escape.txt"])
+    assert ok is False
+    assert any("escapes" in e or "missing" in e or "not allowlisted" in e for e in errs)
+
+
+def test_absolute_path_rejected():
+    import tempfile, os
+    from eledger.publisher import Publisher
+    work = tempfile.mkdtemp()
+    outside = tempfile.mkdtemp()
+    Path(outside, "a.txt").write_text("x") if False else None
+    from pathlib import Path
+    Path(outside, "a.txt").write_text("x")
+    p = Publisher(work, allowed_files={"a.txt"}, dry_run=True)
+    ok, errs = p.stage([os.path.join(outside, "a.txt")])
+    assert ok is False
+    assert any("escapes" in e or "missing" in e or "not allowlisted" in e for e in errs)
+
+
+import sys as _sys
+import pytest as _pytest
+@_pytest.mark.skipif(_sys.platform == "win32", reason="symlink privilege")
+def test_symlink_stage_rejected():
+    import tempfile, os
+    from eledger.publisher import Publisher
+    from pathlib import Path
+    work = tempfile.mkdtemp()
+    real = os.path.join(work, "real.txt")
+    Path(real).write_text("x")
+    link = os.path.join(work, "link.txt")
+    os.symlink(real, link)
+    p = Publisher(work, allowed_files={"link.txt"}, dry_run=True)
+    ok, errs = p.stage(["link.txt"])
+    assert ok is False
+    assert any("symlink" in e for e in errs)
+
+
+def test_local_remote_publication_integration(tmp_path):
+    import subprocess, os
+    remote = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
+    work = tmp_path / "work"
+    subprocess.run(["git", "clone", str(remote), str(work)], check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=str(work), check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=str(work), check=True)
+    # initial commit so HEAD exists
+    (work / "README.md").write_text("init")
+    subprocess.run(["git", "add", "README.md"], cwd=str(work), check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=str(work), check=True)
+    subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=str(work), check=True)
+    subprocess.run(["git", "branch", "-M", "main"], cwd=str(work), check=True)
+    subprocess.run(["git", "push", "-u", "origin", "main"], cwd=str(work), check=True, capture_output=True)
+    from eledger.publisher import Publisher
+    import json
+    manifest = work / "manifest.json"
+    manifest.write_text(json.dumps({"run_id": "test", "started_at": "2026-01-01T00:00:00", "status": "complete", "artifact_hashes": {}}))
+    (work / "artifact.txt").write_text("synthetic")
+    pub = Publisher(str(work), allowed_files={"artifact.txt", "manifest.json"}, dry_run=False)
+    ok, errs = pub.stage(["artifact.txt"])
+    assert ok, errs
+    res = pub.publish(str(manifest), [str(work / "artifact.txt")], "add artifact", branch="main")
+    assert res["status"] == "published", res
+    # verify remote received artifact
+    check = subprocess.run(["git", "--git-dir", str(remote), "ls-tree", "-r", "main", "--name-only"], capture_output=True, text=True)
+    assert "artifact.txt" in check.stdout

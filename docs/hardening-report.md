@@ -29,3 +29,24 @@
 - `git push`: 30s timeout → status `push_timeout` (outcome unknown).
 
 Timeout outcomes are NOT confirmed failures. The remote may have accepted the operation before the local process terminated. Operator must verify repository/remote state before retrying. No automatic retry or rerun of the pipeline is performed. Real publication remains disabled by default (dry_run=True).
+
+## Adapter verification (Hermes v23)
+- Source: `HermesStateDbReader` (SQLite, read-only, mode=ro, query_only=ON).
+- Supported schema: v23 only. Tables sessions/messages with required columns and FK.
+- Tests: missing DB, missing table, missing FK, unsupported schema version, read-only no-mutation, parent/child separation, inactive exclusion, compacted retention, archived/pinned metadata.
+- Limitations: only v23; no live DB inspection performed; no broad provider coverage claimed.
+
+## Attribution evaluation (synthetic)
+- Dataset: 5 labeled cases (mention x2, unknown x3). All assert exact expected classification.
+- Metrics: classifier is conservative; precision/recall not meaningful at n=5. Synthetic only.
+- Limitations: no real-world accuracy claim; no contradictory/out-of-order cases yet.
+
+## Publication verification
+- Publisher timeouts: fetch/rev-list/add 10s, commit/push 30s. Timeout outcomes reported as *_timeout (outcome unknown).
+- Fail-closed staging, divergence, ambiguous outcomes covered by mocked tests.
+- Local disposable remote: NOT exercised this batch (deferred). Real publication disabled.
+
+## Local publication integration (Workstream C)
+- Disposable bare remote + clone used; synthetic artifact.txt published; remote verified to contain artifact.txt.
+- Result: published. No external network, no real credentials.
+- Limitations: local Git only; not equivalent to real GitHub publication.
